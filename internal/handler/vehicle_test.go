@@ -109,4 +109,32 @@ func TestHandlerVehicle_FindByColorAndYear(t *testing.T) {
 	`
 		assert.JSONEq(t, expectedResponse, w.Body.String())
 	})
+	t.Run("failure in retrieving vehicle by color and year", func(t *testing.T) {
+		// Arrange
+		mockService := new(MockVehicleService)
+
+		handler := NewHandlerVehicle(mockService)
+		r := chi.NewRouter()
+		r.Get("/vehicles/{color}/{year}", handler.FindByColorAndYear())
+
+		expectedVehicles := map[int]internal.Vehicle{}
+		expectedError := internal.ErrServiceNoVehicles
+		mockService.On("FindByColorAndYear", "blue", 2023).Return(expectedVehicles, expectedError)
+
+		// Act 
+		req := httptest.NewRequest("GET", "/vehicles/blue/2023", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+
+		// Assert 
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+		// Verificar si se incluye la información correcta en la respuesta.
+		expectedResponse := `
+		{
+			"message":"internal error", "status":"Internal Server Error"
+		}
+	`
+		assert.JSONEq(t, expectedResponse, w.Body.String())
+	})
 }
